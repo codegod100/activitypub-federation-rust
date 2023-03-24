@@ -71,8 +71,9 @@ where
     T: Clone,
 {
     // TODO: would be nice if we could implement this without regex and remove the dependency
-    let regex = Regex::new(&format!("^acct:([a-zA-Z0-9_]{{3,}})@{}$", data.domain()))
+    let regex = Regex::new(&format!("^acct:([a-zA-Z0-9_]{{1,}})@{}$", data.domain()))
         .map_err(Error::other)?;
+    println!("query: {:#?}", query);
     Ok(regex
         .captures(query)
         .and_then(|c| c.get(1))

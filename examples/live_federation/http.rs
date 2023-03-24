@@ -60,7 +60,9 @@ pub async fn webfinger(
     Query(query): Query<WebfingerQuery>,
     data: Data<DatabaseHandle>,
 ) -> Result<Json<Webfinger>, Error> {
-    let name = extract_webfinger_name(&query.resource, &data)?;
+    println!("IN FUNCTION");
+    let name = extract_webfinger_name(&query.resource, &data).unwrap();
+    println!("{:#?}", name);
     let db_user = data.read_user(&name)?;
     Ok(Json(build_webfinger_response(
         query.resource,
