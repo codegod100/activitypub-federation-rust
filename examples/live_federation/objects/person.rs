@@ -1,4 +1,8 @@
-use crate::{activities::create_post::CreatePost, database::DatabaseHandle, error::Error};
+use crate::{
+    activities::{create_post::CreatePost, follow::Follow},
+    database::DatabaseHandle,
+    error::Error,
+};
 use activitypub_federation::{
     config::Data,
     fetch::object_id::ObjectId,
@@ -32,6 +36,7 @@ pub struct DbUser {
 #[enum_delegate::implement(ActivityHandler)]
 pub enum PersonAcceptedActivities {
     CreateNote(CreatePost),
+    Follow(Follow),
 }
 
 impl DbUser {

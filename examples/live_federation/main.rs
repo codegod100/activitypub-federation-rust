@@ -1,16 +1,23 @@
 use crate::{
-    database::Database,
+    activities::create_post::CreatePost,
+    database::{Database, DatabaseHandle},
     http::{http_get_user, http_post_user_inbox, webfinger},
-    objects::{person::DbUser, post::DbPost},
+    objects::{
+        person::DbUser,
+        post::{DbPost, Mention, Note},
+    },
     utils::generate_object_id,
 };
-use activitypub_federation::config::{FederationConfig, FederationMiddleware};
+use activitypub_federation::config::{Data, FederationConfig, FederationMiddleware};
+use activitystreams_kinds::public;
 use axum::{
     extract::Json,
     routing::{get, post, put},
     Router,
 };
 use error::Error;
+use regex::Regex;
+use reqwest::Url;
 use serde::Deserialize;
 use std::{
     net::ToSocketAddrs,
@@ -81,10 +88,7 @@ async fn main() -> Result<(), Error> {
         .route("/:user", get(http_get_user))
         .route("/:user/inbox", post(http_post_user_inbox))
         .route("/.well-known/webfinger", get(webfinger))
-        .route(
-            "/_matrix/app/v1/transactions/:transaction",
-            put(handle_matrix_tx),
-        )
+        .route("/_matrix/app/v1/transactions/:tx_id", put(handle_matrix_tx))
         .layer(FederationMiddleware::new(config));
 
     let addr = BIND_ADDRESS
@@ -99,10 +103,46 @@ async fn main() -> Result<(), Error> {
 }
 
 #[debug_handler]
-async fn handle_matrix_tx(body: String) -> String {
+async fn handle_matrix_tx(
+    data: Data<DatabaseHandle>,
+    axum::extract::Path(tx_id): axum::extract::Path<String>,
+    body: String,
+) -> String {
     println!("in matrix handler");
     let tx: Transaction = serde_json::from_str(&body).unwrap();
+    for event in tx.events {
+        let re = Regex::new(r#".*\[\[(.*?)\]\].*"#).unwrap();
+        let maybecaps = re.captures(&event.content.body);
+        if let Some(caps) = maybecaps {
+            println!("Found captures");
+            let link = caps.get(1).unwrap().as_str();
+            let mention = Mention {
+                href: Url::parse("https://mastodon.loener.nl/users/v").unwrap(),
+                kind: Default::default(),
+            };
+            let agora = format!("https://anagora.org/{}", link);
+            let note = Note {
+                kind: Default::default(),
+                id: generate_object_id(DOMAIN).unwrap().into(),
+                attributed_to: data.local_user().ap_id,
+                to: vec![public()],
+                content: format!(
+                    "agora link -> [[<a href='{}'>{}</a>]] found in {}",
+                    agora, link, body
+                ),
+                in_reply_to: None,
+                tag: vec![mention],
+            };
+            CreatePost::send(
+                note,
+                Url::parse("https://mastodon.loener.nl/users/v/inbox").unwrap(),
+                &data,
+            )
+            .await
+            .unwrap();
+        }
+    }
+    println!("{:#?}\n\nTransaction id: {}", body, tx_id);
     // let out = format!("Transaction: {:#?}", tx);
-    println!("{:#?}\n\n{:#?}", body, tx);
     body
 }

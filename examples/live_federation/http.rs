@@ -13,6 +13,7 @@ use activitypub_federation::{
     protocol::context::WithContext,
     traits::Object,
 };
+use activitystreams_kinds::activity;
 use axum::{
     extract::{Path, Query},
     response::{IntoResponse, Response},
@@ -43,6 +44,8 @@ pub async fn http_post_user_inbox(
     data: Data<DatabaseHandle>,
     activity_data: ActivityData,
 ) -> impl IntoResponse {
+    // let body = String::from(&activity_data.body);
+    println!("INBOX: {}", String::from_utf8_lossy(&activity_data.body));
     receive_activity::<WithContext<PersonAcceptedActivities>, DbUser, DatabaseHandle>(
         activity_data,
         &data,

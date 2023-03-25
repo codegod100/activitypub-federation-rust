@@ -28,14 +28,14 @@ pub struct DbPost {
 #[serde(rename_all = "camelCase")]
 pub struct Note {
     #[serde(rename = "type")]
-    kind: NoteType,
-    id: ObjectId<DbPost>,
+    pub kind: NoteType,
+    pub id: ObjectId<DbPost>,
     pub(crate) attributed_to: ObjectId<DbUser>,
     #[serde(deserialize_with = "deserialize_one_or_many")]
     pub(crate) to: Vec<Url>,
-    content: String,
-    in_reply_to: Option<ObjectId<DbPost>>,
-    tag: Vec<Mention>,
+    pub content: String,
+    pub in_reply_to: Option<ObjectId<DbPost>>,
+    pub tag: Vec<Mention>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

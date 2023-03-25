@@ -17,7 +17,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use http::{HeaderMap, Method, Uri};
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned, Serialize};
 use tracing::debug;
 
 /// Handles incoming activities, verifying HTTP signatures and other checks
@@ -39,6 +39,10 @@ where
     verify_inbox_hash(activity_data.headers.get("Digest"), &activity_data.body)?;
 
     let activity: Activity = serde_json::from_slice(&activity_data.body)?;
+    // println!(
+    //     "ACTIVITY: {:#?}",
+    //     String::from_utf8_lossy(&activity_data.body)
+    // );
     data.config.verify_url_and_domain(&activity).await?;
     let actor = ObjectId::<ActorT>::from(activity.actor().clone())
         .dereference(data)
@@ -63,7 +67,8 @@ pub struct ActivityData {
     headers: HeaderMap,
     method: Method,
     uri: Uri,
-    body: Vec<u8>,
+    /// testing
+    pub body: Vec<u8>, // testing
 }
 
 #[async_trait]
