@@ -1,12 +1,17 @@
 use crate::{database::DatabaseHandle, generate_object_id, objects::person::DbUser};
 use activitypub_federation::{
+    activity_queue::send_activity,
     config::Data,
     fetch::object_id::ObjectId,
     kinds::activity::FollowType,
+    protocol::context::WithContext,
     traits::{ActivityHandler, Actor},
 };
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use url::Url;
+
+use super::accept::Accept;
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -50,17 +55,26 @@ impl ActivityHandler for Follow {
     #[allow(clippy::await_holding_lock)]
     async fn receive(self, data: &Data<Self::DataType>) -> Result<(), Self::Error> {
         // add to followers
-        // let local_user = {
-        //     let mut users = data.users.lock().unwrap();
-        //     let local_user = users.first_mut().unwrap();
-        //     local_user.followers.push(self.actor.inner().clone());
-        //     local_user.clone()
-        // };
+        let local_user = {
+            let mut users = data.users.lock().unwrap();
+            let local_user = users.first_mut().unwrap();
+            local_user.followers.push(self.actor.inner().clone());
+            local_user.clone()
+        };
 
         // send back an accept
-        // let follower = self.actor.dereference(data).await?;
+        let follower = self.actor.dereference(data).await?;
         // let id = generate_object_id(data.domain())?;
-        // let accept = Accept::new(local_user.ap_id.clone(), self, id.clone());
+        let id = generate_object_id(data.domain())?;
+        let accept = Accept::new(local_user.ap_id.clone(), self, id.clone());
+        let create_with_context = WithContext::new_default(accept);
+        send_activity(
+            create_with_context,
+            &data.local_user(),
+            vec![follower.shared_inbox_or_inbox()],
+            data,
+        )
+        .await?;
         // local_user
         //     .send(accept, vec![follower.shared_inbox_or_inbox()], data)
         //     .await?;

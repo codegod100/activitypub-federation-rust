@@ -112,6 +112,15 @@ pub fn build_webfinger_response(subject: String, url: Url) -> Webfinger {
                 href: Some(url),
                 properties: Default::default(),
             },
+            WebfingerLink {
+                rel: Some("git".to_string()),
+                kind: Some("vcs-git".to_string()),
+                href: Some(
+                    Url::parse("https://github.com/codegod100/activitypub-federation-rust")
+                        .unwrap(),
+                ),
+                properties: Default::default(),
+            },
         ],
         aliases: vec![],
         properties: Default::default(),
