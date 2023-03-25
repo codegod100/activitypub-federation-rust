@@ -12,7 +12,7 @@ use activitypub_federation::config::{Data, FederationConfig, FederationMiddlewar
 use activitystreams_kinds::public;
 use axum::{
     extract::Json,
-    response::Html,
+    response::{Html, Redirect},
     routing::{get, post, put},
     Router,
 };
@@ -27,6 +27,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 use tracing::log::{info, LevelFilter};
+use urlencoding::decode;
 
 mod activities;
 mod database;
@@ -119,15 +120,28 @@ struct AppDetails {
     redirect_uris: String,
 }
 
-async fn submit(body: String) -> String {
+async fn submit(body: String) -> Redirect {
     let db = DB::open_default("data").unwrap();
 
     let mut parts = body.split("=");
-    let server = parts.nth(1).unwrap().to_string();
+    let server = decode(parts.nth(1).unwrap()).unwrap().to_string();
     let config = db.get(&server).unwrap();
-    create_app(&server).await;
+    let ac = match config {
+        Some(chars) => {
+            println!("got oauth app details");
+            let data: AppConfig = serde_json::from_slice(&chars).unwrap();
+            data
+        }
+        None => {
+            println!("creating new oauth app");
+            let ac = create_app(&server).await;
+            let data = serde_json::to_vec(&ac).unwrap();
+            db.put(&server, data).unwrap();
+            ac
+        }
+    };
     // println!("{:#?}", server);
-    server
+    Redirect::permanent("/login")
 }
 
 async fn create_app(server: &str) -> AppConfig {
