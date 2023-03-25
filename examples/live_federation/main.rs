@@ -39,7 +39,7 @@ mod utils;
 
 const DOMAIN: &str = "social.vera.pink";
 const LOCAL_USER_NAME: &str = "v";
-const BIND_ADDRESS: &str = "127.0.0.1:8003";
+const BIND_ADDRESS: &str = "0.0.0.0:8003";
 
 use axum_macros::debug_handler;
 
@@ -95,6 +95,7 @@ async fn main() -> Result<(), Error> {
         .route("/_matrix/app/v1/transactions/:tx_id", put(handle_matrix_tx))
         .route("/login", get(login))
         .route("/submit", post(submit))
+        .route("/redirect", get(auth))
         .layer(FederationMiddleware::new(config));
 
     let addr = BIND_ADDRESS
@@ -112,6 +113,7 @@ async fn main() -> Result<(), Error> {
 struct AppConfig {
     client_id: String,
     client_secret: String,
+    // redirect_uri: String,
 }
 
 #[derive(Serialize)]
@@ -120,6 +122,10 @@ struct AppDetails {
     redirect_uris: String,
 }
 
+async fn auth(body: String) -> String {
+    println!("{:#?}", body);
+    body
+}
 async fn submit(body: String) -> Redirect {
     let db = DB::open_default("data").unwrap();
 
@@ -141,7 +147,11 @@ async fn submit(body: String) -> Redirect {
         }
     };
     // println!("{:#?}", server);
-    Redirect::permanent("/login")
+    let redirect = format!("https://social.vera.pink/redirect?server={}", server);
+    Redirect::to(&format!(
+        "{}/oauth/authorize?response_type=code&client_id={}&redirect_uri={}",
+        server, ac.client_id, redirect
+    ))
 }
 
 async fn create_app(server: &str) -> AppConfig {
@@ -151,7 +161,7 @@ async fn create_app(server: &str) -> AppConfig {
     // let query = format!("")
     let details = AppDetails {
         client_name: "Agora Social".to_string(),
-        redirect_uris: "http://social.vera.pink/redirect".to_string(),
+        redirect_uris: "https://social.vera.pink/redirect".to_string(),
     };
     let ac = reqwest::Client::new()
         .post(url)
