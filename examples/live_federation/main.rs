@@ -12,14 +12,17 @@ use activitypub_federation::config::{Data, FederationConfig, FederationMiddlewar
 use activitystreams_kinds::public;
 use axum::{
     extract::Json,
+    response::Html,
     routing::{get, post, put},
     Router,
 };
 use error::Error;
 use regex::Regex;
 use reqwest::Url;
-use serde::Deserialize;
+use rocksdb::DB;
+use serde::{Deserialize, Serialize};
 use std::{
+    fs,
     net::ToSocketAddrs,
     sync::{Arc, Mutex},
 };
@@ -89,6 +92,8 @@ async fn main() -> Result<(), Error> {
         .route("/:user/inbox", post(http_post_user_inbox))
         .route("/.well-known/webfinger", get(webfinger))
         .route("/_matrix/app/v1/transactions/:tx_id", put(handle_matrix_tx))
+        .route("/login", get(login))
+        .route("/submit", post(submit))
         .layer(FederationMiddleware::new(config));
 
     let addr = BIND_ADDRESS
@@ -100,6 +105,55 @@ async fn main() -> Result<(), Error> {
         .await?;
 
     Ok(())
+}
+
+#[derive(Serialize, Deserialize, Default, Debug)]
+struct AppConfig {
+    client_id: String,
+    client_secret: String,
+}
+
+#[derive(Serialize)]
+struct AppDetails {
+    client_name: String,
+    redirect_uris: String,
+}
+
+async fn submit(body: String) -> String {
+    let db = DB::open_default("data").unwrap();
+
+    let mut parts = body.split("=");
+    let server = parts.nth(1).unwrap().to_string();
+    let config = db.get(&server).unwrap();
+    create_app(&server).await;
+    // println!("{:#?}", server);
+    server
+}
+
+async fn create_app(server: &str) -> AppConfig {
+    println!("{}", server);
+    let mut url = Url::parse(server).unwrap();
+    url.set_path("/api/v1/apps");
+    // let query = format!("")
+    let details = AppDetails {
+        client_name: "Agora Social".to_string(),
+        redirect_uris: "http://social.vera.pink/redirect".to_string(),
+    };
+    let ac = reqwest::Client::new()
+        .post(url)
+        .form(&details)
+        .send()
+        .await
+        .unwrap()
+        .json::<AppConfig>()
+        .await
+        .unwrap();
+    println!("{:#?}", &ac);
+    ac
+}
+
+async fn login() -> Html<String> {
+    axum::response::Html(fs::read_to_string("login.html").unwrap())
 }
 
 #[debug_handler]
