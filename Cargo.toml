@@ -55,8 +55,9 @@ tower = { version = "0.4.13", optional = true }
 hyper = { version = "0.14", optional = true }
 displaydoc = "0.2.3"
 tokio = "1.26.0"
-rocksdb = "0.20.1"
-urlencoding = "2.1.2"
+edgedb-tokio = "0.3.0"
+edgedb-derive = "0.4.0"
+edgedb-protocol = "0.4.0"
 
 [features]
 default = ["actix-web", "axum"]

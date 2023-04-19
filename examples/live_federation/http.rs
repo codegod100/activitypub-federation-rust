@@ -2,6 +2,7 @@ use crate::{
     database::DatabaseHandle,
     error::Error,
     objects::person::{DbUser, Person, PersonAcceptedActivities},
+    webfinger::{build_webfinger_response, Webfinger},
 };
 use activitypub_federation::{
     axum::{
@@ -9,7 +10,7 @@ use activitypub_federation::{
         json::FederationJson,
     },
     config::Data,
-    fetch::webfinger::{build_webfinger_response, extract_webfinger_name, Webfinger},
+    fetch::webfinger::extract_webfinger_name,
     protocol::context::WithContext,
     traits::Object,
 };
@@ -63,12 +64,9 @@ pub async fn webfinger(
     Query(query): Query<WebfingerQuery>,
     data: Data<DatabaseHandle>,
 ) -> Result<Json<Webfinger>, Error> {
-    println!("IN FUNCTION");
     let name = extract_webfinger_name(&query.resource, &data).unwrap();
-    println!("{:#?}", name);
+    println!("got webfinger {}", name);
     let db_user = data.read_user(&name)?;
-    Ok(Json(build_webfinger_response(
-        query.resource,
-        db_user.ap_id.into_inner(),
-    )))
+    let resp = build_webfinger_response(query.resource, db_user).await;
+    Ok(Json(resp))
 }

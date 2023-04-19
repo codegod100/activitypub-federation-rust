@@ -18,6 +18,7 @@ use url::Url;
 
 #[derive(Debug, Clone)]
 pub struct DbUser {
+    pub id: String,
     pub name: String,
     pub ap_id: ObjectId<DbUser>,
     pub inbox: Url,
@@ -28,6 +29,7 @@ pub struct DbUser {
     last_refreshed_at: NaiveDateTime,
     pub followers: Vec<Url>,
     pub local: bool,
+    pub links: Vec<crate::edge::Link>,
 }
 
 /// List of all activities which this actor can receive.
@@ -40,12 +42,14 @@ pub enum PersonAcceptedActivities {
 }
 
 impl DbUser {
-    pub fn new(hostname: &str, name: &str) -> Result<DbUser, Error> {
-        let ap_id = Url::parse(&format!("https://{}/{}", hostname, &name))?.into();
-        let inbox = Url::parse(&format!("https://{}/{}/inbox", hostname, &name))?;
+    pub fn new(hostname: &str, person: &crate::edge::Person) -> Result<DbUser, Error> {
+        let ap_id = Url::parse(&format!("https://{}/{}", hostname, &person.username))?.into();
+        let inbox = Url::parse(&format!("https://{}/{}/inbox", hostname, &person.username))?;
         let keypair = generate_actor_keypair()?;
         Ok(DbUser {
-            name: name.to_string(),
+            id: person.id.to_owned(),
+            links: person.links.to_owned(),
+            name: person.username.to_owned(),
             ap_id,
             inbox,
             public_key: keypair.public_key,
@@ -114,6 +118,8 @@ impl Object for DbUser {
         _data: &Data<Self::DataType>,
     ) -> Result<Self, Self::Error> {
         Ok(DbUser {
+            id: String::from(""),
+            links: vec![],
             name: json.preferred_username,
             ap_id: json.id,
             inbox: json.inbox,

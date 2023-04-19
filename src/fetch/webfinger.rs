@@ -73,7 +73,6 @@ where
     // TODO: would be nice if we could implement this without regex and remove the dependency
     let regex = Regex::new(&format!("^acct:([a-zA-Z0-9_]{{1,}})@{}$", data.domain()))
         .map_err(Error::other)?;
-    println!("query: {:#?}", query);
     Ok(regex
         .captures(query)
         .and_then(|c| c.get(1))
@@ -96,36 +95,37 @@ where
 /// build_webfinger_response(subject, url);
 /// # Ok::<(), anyhow::Error>(())
 /// ```
-pub fn build_webfinger_response(subject: String, url: Url) -> Webfinger {
-    Webfinger {
-        subject,
-        links: vec![
-            WebfingerLink {
-                rel: Some("http://webfinger.net/rel/profile-page".to_string()),
-                kind: Some("text/html".to_string()),
-                href: Some(url.clone()),
-                properties: Default::default(),
-            },
-            WebfingerLink {
-                rel: Some("self".to_string()),
-                kind: Some(FEDERATION_CONTENT_TYPE.to_string()),
-                href: Some(url),
-                properties: Default::default(),
-            },
-            WebfingerLink {
-                rel: Some("git".to_string()),
-                kind: Some("vcs-git".to_string()),
-                href: Some(
-                    Url::parse("https://github.com/codegod100/activitypub-federation-rust")
-                        .unwrap(),
-                ),
-                properties: Default::default(),
-            },
-        ],
-        aliases: vec![],
-        properties: Default::default(),
-    }
-}
+// pub async fn build_webfinger_response(subject: String, url: Url, name: &str) -> Webfinger {
+//     let person = edge::find_person(name).await.unwrap();
+//     Webfinger {
+//         subject,
+//         links: vec![
+//             WebfingerLink {
+//                 rel: Some("http://webfinger.net/rel/profile-page".to_string()),
+//                 kind: Some("text/html".to_string()),
+//                 href: Some(url.clone()),
+//                 properties: Default::default(),
+//             },
+//             WebfingerLink {
+//                 rel: Some("self".to_string()),
+//                 kind: Some(FEDERATION_CONTENT_TYPE.to_string()),
+//                 href: Some(url),
+//                 properties: Default::default(),
+//             },
+//             WebfingerLink {
+//                 rel: Some("git".to_string()),
+//                 kind: Some("vcs-git".to_string()),
+//                 href: Some(
+//                     Url::parse("https://github.com/codegod100/activitypub-federation-rust")
+//                         .unwrap(),
+//                 ),
+//                 properties: Default::default(),
+//             },
+//         ],
+//         aliases: vec![],
+//         properties: Default::default(),
+//     }
+// }
 
 /// A webfinger response with information about a `Person` or other type of actor.
 #[derive(Serialize, Deserialize, Debug, Default)]

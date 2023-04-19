@@ -91,7 +91,7 @@ impl Object for DbPost {
         let note = Note {
             kind: Default::default(),
             id: generate_object_id(data.domain())?.into(),
-            attributed_to: data.local_user().ap_id,
+            attributed_to: data.local_user("v").ap_id,
             to: vec![public()],
             content: format!("Hello {}", creator.name),
             in_reply_to: Some(json.id.clone()),

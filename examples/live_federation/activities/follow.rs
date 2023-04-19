@@ -70,7 +70,7 @@ impl ActivityHandler for Follow {
         let create_with_context = WithContext::new_default(accept);
         send_activity(
             create_with_context,
-            &data.local_user(),
+            &data.local_user("v"),
             vec![follower.shared_inbox_or_inbox()],
             data,
         )
