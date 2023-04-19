@@ -38,32 +38,43 @@ pub struct WebfingerLink {
 
 pub async fn build_webfinger_response(subject: String, user: DbUser) -> Webfinger {
     let url = user.ap_id.into_inner();
-    Webfinger {
+    let mut links = vec![
+        WebfingerLink {
+            rel: Some("http://webfinger.net/rel/profile-page".to_string()),
+            kind: Some("text/html".to_string()),
+            href: Some(url.clone()),
+            properties: Default::default(),
+        },
+        WebfingerLink {
+            rel: Some("self".to_string()),
+            kind: Some(FEDERATION_CONTENT_TYPE.to_string()),
+            href: Some(url),
+            properties: Default::default(),
+        },
+        WebfingerLink {
+            rel: Some("git".to_string()),
+            kind: Some("vcs-git".to_string()),
+            href: Some(
+                Url::parse("https://github.com/codegod100/activitypub-federation-rust").unwrap(),
+            ),
+            properties: Default::default(),
+        },
+    ];
+
+    for link in user.links {
+        let href = Url::parse(&link.href).unwrap();
+        links.push(WebfingerLink {
+            rel: Some(link.rel),
+            kind: Some(link.kind),
+            href: Some(href),
+            properties: Default::default(),
+        })
+    }
+    let wf = Webfinger {
         subject,
-        links: vec![
-            WebfingerLink {
-                rel: Some("http://webfinger.net/rel/profile-page".to_string()),
-                kind: Some("text/html".to_string()),
-                href: Some(url.clone()),
-                properties: Default::default(),
-            },
-            WebfingerLink {
-                rel: Some("self".to_string()),
-                kind: Some(FEDERATION_CONTENT_TYPE.to_string()),
-                href: Some(url),
-                properties: Default::default(),
-            },
-            WebfingerLink {
-                rel: Some("git".to_string()),
-                kind: Some("vcs-git".to_string()),
-                href: Some(
-                    Url::parse("https://github.com/codegod100/activitypub-federation-rust")
-                        .unwrap(),
-                ),
-                properties: Default::default(),
-            },
-        ],
+        links,
         aliases: vec![],
         properties: Default::default(),
-    }
+    };
+    wf
 }
